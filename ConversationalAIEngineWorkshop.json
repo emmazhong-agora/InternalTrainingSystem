@@ -1,0 +1,627 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2025-10-20T03:57:20.867403Z",
+  "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4",
+  "description": "RAG-ready knowledge base generated from the Conversational AI Engine Workshop transcript. Structured into topics, semantic chunks, glossary and integration recommendations.",
+  "topics": [
+    {
+      "id": "latency_overview",
+      "title": "Latency Overview & Definitions",
+      "topic": "Latency Analysis",
+      "summary": "Defines end-to-end response latency and interruption response time; explains perception vs internal measurements.",
+      "chunks": [
+        {
+          "id": "latency_def_001",
+          "title": "End-to-End Response Latency",
+          "text": "End-to-end response latency is the time between when a user finishes speaking and when the AI begins its audible response. \nThis perceived latency includes the first mile and last mile (RTC transmission and device playback), and all server-side processing: ASR, LM, and TTS. \nIt is the primary metric users notice in conversational voice agents and is distinct from server-only or component-level timings. \nWhen reporting latency concerns, always clarify whether the user means perceived end-to-end latency or an internal metric. ",
+          "chunk_summary": "Definition and scope of end-to-end response latency.",
+          "keywords": [
+            "end-to-end latency",
+            "response latency",
+            "RTC",
+            "ASR",
+            "TTS"
+          ],
+          "applicable_roles": [
+            "SRE",
+            "Field Engineer",
+            "Product Manager",
+            "Support"
+          ],
+          "difficulty_level": "basic",
+          "relations": {
+            "related": [
+              "latency_interruption_002",
+              "cascade_latency_003"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "latency_interruption_002",
+          "title": "Interruption Response Time and False Interrupts",
+          "text": "Interruption response time measures how quickly the system stops playback and reacts when a user interrupts the AI mid-response. \nOverlap between user speech and AI speech is the key symptom. Acceptable interruption response varies by use-case; below 500ms often feels immediate, while 500–1000ms is noticeable. \nFalse interruptions occur when environmental noises (honks, wind, other voices) trigger the system to stop; background human voice suppression and robust VAD/VAT tuning help mitigate false interrupts. ",
+          "chunk_summary": "Interruption handling, acceptable thresholds and false-positive causes.",
+          "keywords": [
+            "interruption response",
+            "VAD",
+            "false interruption",
+            "background suppression"
+          ],
+          "applicable_roles": [
+            "SRE",
+            "ASR Engineer",
+            "Product Manager"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "prerequisite": [
+              "latency_def_001"
+            ],
+            "related": [
+              "cascade_latency_003"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        }
+      ]
+    },
+    {
+      "id": "cascade_latency",
+      "title": "Cascade Latency and Component Metrics",
+      "topic": "Latency Analysis",
+      "summary": "Explains component-level latency (ASR, LM, TTS), TTFT vs TPS, and how to add component timings into cascade latency.",
+      "chunks": [
+        {
+          "id": "cascade_latency_003",
+          "title": "Component-Level Latency and Time-to-First-Token (TTFT)",
+          "text": "Cascade latency sums latencies of the ASR, LM, and TTS components. For ASR, time-to-last-word (VAT) matters because often full sentence chunks are sent to ASR. \nFor large language models, the critical indicator is Time-to-First-Token (TTFT) — the delay before the model emits the first token — which heavily affects perceived response latency. \nToken-per-second (TPS) is the generation rate and is less influential on perceived responsiveness than TTFT in conversational settings. TTS has a Time-to-First-Byte/Audio indicator marking when audio playback begins. ",
+          "chunk_summary": "How component metrics combine and why TTFT is critical.",
+          "keywords": [
+            "TTFT",
+            "TPS",
+            "time-to-last-word",
+            "time-to-first-byte"
+          ],
+          "applicable_roles": [
+            "ML Engineer",
+            "Platform Engineer",
+            "Product Manager"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "prerequisite": [
+              "latency_def_001"
+            ],
+            "related": [
+              "latency_interruption_002"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "cascade_latency_004",
+          "title": "Ideal Cascade Latency Targets",
+          "text": "Target cascade latency for conversational AI should aim for ~1 second or lower where feasible. This assumes a small fraction (e.g., ~100–500ms) may come from network/RTC and device playback. \nA well-configured pipeline that yields ~1s cascade latency often results in perceived end-to-end latency around 1.2–1.5s depending on first/last mile conditions. \nVendors and model choices directly affect whether this target is achievable; prioritize low TTFT and stable model providers for latency-sensitive applications. ",
+          "chunk_summary": "Recommended latency target and the influence of network/device delays.",
+          "keywords": [
+            "cascade latency target",
+            "network delay",
+            "device playback"
+          ],
+          "applicable_roles": [
+            "Product Manager",
+            "SRE",
+            "Solutions Architect"
+          ],
+          "difficulty_level": "basic",
+          "relations": {
+            "related": [
+              "cascade_latency_003",
+              "benchmarking_005"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        }
+      ]
+    },
+    {
+      "id": "measuring_latency",
+      "title": "Measuring Latency Practically",
+      "topic": "Latency Analysis",
+      "summary": "Practical techniques for measuring end-to-end latency: record sessions, analyze audio waveforms, use internal logs and visualization tools.",
+      "chunks": [
+        {
+          "id": "meas_latency_005",
+          "title": "Session Recording & Audacity Method",
+          "text": "A straightforward way to measure end-to-end latency is to record a full session (MP3/MP4) and analyze audio waveforms in a tool like Audacity. \nBy inspecting waves and measuring time between user speech end and AI speech start, teams can estimate perceived response latency. This method is useful for validating user reports and reproducing timing issues locally. ",
+          "chunk_summary": "Record and analyze audio waveforms to measure perceived latency.",
+          "keywords": [
+            "Audacity",
+            "session recording",
+            "perceived latency measurement"
+          ],
+          "applicable_roles": [
+            "QA Engineer",
+            "Support",
+            "SRE"
+          ],
+          "difficulty_level": "basic",
+          "relations": {
+            "related": [
+              "investigation_tool_006"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "investigation_tool_006",
+          "title": "Internal Investigation Tool & Log Visualization",
+          "text": "The transcript mentions an internal investigation tool developed by CST that visualizes server-side component timings and logs, excluding RTC effects. \nThis tool helps separate VAT, ASR, LM, and TTS contributions to end-to-end latency and provides request parameters, raw logs, and graphs to diagnose slow turns. \nWhere available, paste the agent ID into the tool to retrieve conversation logs and component breakdowns. Note: the tool discussed is internal and not yet public. ",
+          "chunk_summary": "Use an internal log visualization tool to diagnose component-level latency.",
+          "keywords": [
+            "investigation tool",
+            "logs",
+            "agent ID",
+            "visualization"
+          ],
+          "applicable_roles": [
+            "Support",
+            "SRE",
+            "Field Engineer"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "prerequisite": [
+              "meas_latency_005"
+            ],
+            "related": [
+              "cascade_latency_003"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        }
+      ]
+    },
+    {
+      "id": "benchmarking_and_models",
+      "title": "Benchmarking & Model Selection",
+      "topic": "Model Selection & Performance",
+      "summary": "Comparison of LLM latency and stability; the role of benchmark lab and standard deviation in model evaluation.",
+      "chunks": [
+        {
+          "id": "benchmarking_007",
+          "title": "Conversational AI Performance Lab",
+          "text": "The Conversational AI Performance Lab is an official benchmark that reports chain-model latency (ASR+LM+TTS) and standard deviation across repeated tests. \nStandard deviation highlights stability; smaller SD implies more consistent latency across turns. Benchmarks are use-case neutral and help compare vendor/model combinations, but they do not measure end-to-end (first/last-mile) latency. ",
+          "chunk_summary": "Purpose and interpretation of the Performance Lab benchmark and standard deviation.",
+          "keywords": [
+            "performance lab",
+            "benchmark",
+            "standard deviation",
+            "chain-model latency"
+          ],
+          "applicable_roles": [
+            "Product Manager",
+            "Solutions Architect",
+            "Field Engineer"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "related": [
+              "cascade_latency_004",
+              "model_selection_008"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "model_selection_008",
+          "title": "LLM Latency Tradeoffs & Vendor Selection",
+          "text": "Models with higher intelligence (e.g., GPT-4o) may incur higher latency and spikes; lower-latency models (e.g., Grok-hosted Llama variants) can offer faster and more stable TTFT. \nChoose vendors that provide low TTFT and low standard deviation if latency sensitivity is high. Use logged evidence (agent ID + investigation tool) to show which component contributes most of the latency when discussing with customers. ",
+          "chunk_summary": "How intelligence-level and vendor implementation affect latency and stability.",
+          "keywords": [
+            "LLM selection",
+            "Grok",
+            "GPT-4o",
+            "latency spikes"
+          ],
+          "applicable_roles": [
+            "Product Manager",
+            "Solutions Architect"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "prerequisite": [
+              "benchmarking_007"
+            ],
+            "related": [
+              "cascade_latency_003"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        }
+      ]
+    },
+    {
+      "id": "custom_lm",
+      "title": "Custom LMs and RAG Impact",
+      "topic": "Model Selection & Integration",
+      "summary": "Custom LMs and added business logic commonly increase TTFT; RAG or orchestration layers can add significant latency if not optimized.",
+      "chunks": [
+        {
+          "id": "custom_lm_009",
+          "title": "Latency Implications of Custom LMs and RAG",
+          "text": "Custom LMs often wrap public APIs (e.g., OpenAI) and add business logic, RAG, or orchestration which increase time-to-first-token. \nTeams frequently underestimate this overhead; a custom LM layer can add ~1s or more to the total latency. When customers report high latency, verify whether a custom LM or extra processing is responsible before attributing blame to platform components. ",
+          "chunk_summary": "Custom LM wrappers and RAG pipelines can increase latency significantly.",
+          "keywords": [
+            "custom LM",
+            "RAG",
+            "orchestration",
+            "latency overhead"
+          ],
+          "applicable_roles": [
+            "ML Engineer",
+            "Solutions Architect",
+            "Product Manager"
+          ],
+          "difficulty_level": "advanced",
+          "relations": {
+            "prerequisite": [
+              "model_selection_008"
+            ],
+            "related": [
+              "cascade_latency_003"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. citeturn7file4"
+        }
+      ]
+    },
+    {
+      "id": "avatars",
+      "title": "Avatar Integration & Architecture",
+      "topic": "Avatar",
+      "summary": "How avatar vendors integrate with the platform, two-worker architecture, and latency impact of adding avatars.",
+      "chunks": [
+        {
+          "id": "avatar_arch_010",
+          "title": "Two-Worker Avatar Architecture",
+          "text": "Avatar integration uses a two-worker architecture: the Conversational AI service (ASR→LM→TTS) and a separate streaming avatar service (vendor-hosted). \nThe platform sends generated TTS audio to the avatar vendor's streaming service (often using Linux server SDKs), which returns synchronized video (and the same audio) into the RTC channel. \nEnd-users subscribe to both audio and video streams; ensure only one audio source is delivered to avoid duplicated audio. ",
+          "chunk_summary": "Avatar flow and separation between combo AI service and vendor streaming avatar service.",
+          "keywords": [
+            "avatar architecture",
+            "streaming avatar service",
+            "Linux SDK",
+            "RTC"
+          ],
+          "applicable_roles": [
+            "Platform Engineer",
+            "Integration Engineer",
+            "Product Manager"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "related": [
+              "avatar_latency_011",
+              "avatar_troubleshoot_012"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "avatar_latency_011",
+          "title": "Avatar Latency Overhead and UX Considerations",
+          "text": "Enabling an avatar typically adds 500–1000ms on top of the cascade latency, because the avatar vendor needs to generate video and sync audio. \nIf base end-to-end latency without avatar is ~1.5s, adding avatar can push perceived latency to ~2–2.5s. Avatar selection is often driven by visual preference first, latency second. ",
+          "chunk_summary": "Expected latency overhead when adding avatar services.",
+          "keywords": [
+            "avatar latency",
+            "user experience",
+            "video generation"
+          ],
+          "applicable_roles": [
+            "Product Manager",
+            "UX Engineer",
+            "Solutions Architect"
+          ],
+          "difficulty_level": "basic",
+          "relations": {
+            "prerequisite": [
+              "avatar_arch_010"
+            ],
+            "related": [
+              "avatar_troubleshoot_012"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "avatar_troubleshoot_012",
+          "title": "Avatar Troubleshooting: Lip Sync & Multiple UIDs",
+          "text": "Lip sync is typically the responsibility of the avatar vendor; issues can also stem from how the vendor integrates the Agora Linux SDK. \nIn avatar-enabled sessions, expect multiple Linux UIDs in the channel (end-user, combo AI agent, streaming avatar service). Differentiate them by stream types (video vs audio) and UID assignment/version. \nFor duplicated audio, ensure server-side audio subscription to the combo AI audio is disabled when avatar audio is published by vendor. ",
+          "chunk_summary": "Who is responsible for lip sync, how to identify avatar vs agent in RTC, and common troubleshooting steps.",
+          "keywords": [
+            "lip sync",
+            "avatar troubleshooting",
+            "UID",
+            "audio duplication"
+          ],
+          "applicable_roles": [
+            "Integration Engineer",
+            "SRE"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "prerequisite": [
+              "avatar_arch_010"
+            ],
+            "related": [
+              "avatar_latency_011"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        }
+      ]
+    },
+    {
+      "id": "preset_management",
+      "title": "Preset Management & Demo Backend",
+      "topic": "Operational",
+      "summary": "How to build and test presets via the internal backend demo, TOML payloads, and agent IDs.",
+      "chunks": [
+        {
+          "id": "preset_013",
+          "title": "Creating and Using Presets (TOML)",
+          "text": "The demo backend supports creating agent presets via a TOML configuration (or JSON equivalents). Define ASR, LM, TTS components and save the preset to obtain an agent ID. \nCopy the agent ID into the official demo's 'custom AI agents' tab to retrieve and test the preset. Use consistent API keys for supported vendors during testing; reach out to platform contacts if keys are missing. ",
+          "chunk_summary": "Workflow for building presets, publishing, and testing via demo.",
+          "keywords": [
+            "preset",
+            "TOML",
+            "agent ID",
+            "demo backend"
+          ],
+          "applicable_roles": [
+            "Field Engineer",
+            "R&D",
+            "Product Manager"
+          ],
+          "difficulty_level": "basic",
+          "relations": {
+            "related": [
+              "preset_014",
+              "integration_notes"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "preset_014",
+          "title": "Best Practices for Preset Testing",
+          "text": "Before debugging presets in the management UI, validate the same payload in curl/Postman to reduce debugging time. The backend builder is convenient but may be harder to debug compared to direct API calls. \nUse separated keys per environment (R&D, field testing, production) and revert to known-working combinations when isolating issues. ",
+          "chunk_summary": "Testing strategy and practical tips for debugging presets.",
+          "keywords": [
+            "curl",
+            "Postman",
+            "API key management",
+            "debugging"
+          ],
+          "applicable_roles": [
+            "Field Engineer",
+            "QA"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "prerequisite": [
+              "preset_013"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        }
+      ]
+    },
+    {
+      "id": "use_cases",
+      "title": "Use Cases and Examples",
+      "topic": "Business",
+      "summary": "Real-world examples from call center deployments to innovative consumer apps (e.g., dating coach).",
+      "chunks": [
+        {
+          "id": "usecase_015",
+          "title": "Call Center Deployment Example",
+          "text": "A European customer used the conversational AI engine for a call center with Ukrainian language support. Key requirements included selecting an ASR vendor that handles Ukrainian well, cloud recording and SIP integration. \nThis case drove feature requests such as SIP support and demonstrated how customer needs shape product priorities. ",
+          "chunk_summary": "Call center example highlighting vendor selection and additional requirements (SIP, recording).",
+          "keywords": [
+            "call center",
+            "Ukrainian ASR",
+            "SIP",
+            "cloud recording"
+          ],
+          "applicable_roles": [
+            "Solutions Architect",
+            "Sales Engineer"
+          ],
+          "difficulty_level": "basic",
+          "relations": {
+            "related": [
+              "usecase_016"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "usecase_016",
+          "title": "Consumer Use Case: AI Dating Coach",
+          "text": "An interesting consumer example is an AI-powered dating coach that collects user preferences, provides coaching across pre-date/post-date phases, and even assists matching. This end-to-end service combines conversational guidance, preference capture, and recommendation logic. \nSuch applications require careful privacy and data-handling design, and may combine conversational pipeline with downstream matching services. ",
+          "chunk_summary": "AI dating coach example and considerations around privacy and end-to-end service.",
+          "keywords": [
+            "consumer app",
+            "recommendation",
+            "privacy",
+            "matching"
+          ],
+          "applicable_roles": [
+            "Product Manager",
+            "Legal/Compliance",
+            "Solutions Architect"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "related": [
+              "usecase_015"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting_and_ops",
+      "title": "Troubleshooting & Operational Tips",
+      "topic": "Operational",
+      "summary": "Operational troubleshooting steps, common errors, logs and escalation paths.",
+      "chunks": [
+        {
+          "id": "ops_017",
+          "title": "Common Sources of Latency Issues",
+          "text": "When diagnosing reported high latency, verify model choice, custom LM layers, and RAG/orchestration overhead. Use agent ID and logs to attribute latency to components. Check for unstable LLM providers that produce spikes and high standard deviation. ",
+          "chunk_summary": "Checklist for diagnosing latency: model, custom LM, RAG, provider stability.",
+          "keywords": [
+            "diagnostics",
+            "agent ID",
+            "RAG overhead",
+            "LLM stability"
+          ],
+          "applicable_roles": [
+            "Support",
+            "SRE",
+            "Field Engineer"
+          ],
+          "difficulty_level": "intermediate",
+          "relations": {
+            "prerequisite": [
+              "investigation_tool_006",
+              "model_selection_008"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        },
+        {
+          "id": "ops_018",
+          "title": "Handling Internationalization & Voice Choices",
+          "text": "Avatar and voice choices are mapped per preset and language; presets may default to male or female voices per language, which explains why some demos show male-only avatars for English. When choosing avatar + voice, keep voice-avatar consistency to avoid dissonance. ",
+          "chunk_summary": "Language-dependent voice-avatar mapping and UX caveats.",
+          "keywords": [
+            "i18n",
+            "voice-avatar consistency",
+            "preset"
+          ],
+          "applicable_roles": [
+            "Localization Engineer",
+            "UX"
+          ],
+          "difficulty_level": "basic",
+          "relations": {
+            "related": [
+              "avatar_arch_010",
+              "preset_013"
+            ]
+          },
+          "source": "Conversational AI Engine Workshop transcript. fileciteturn7file4"
+        }
+      ]
+    }
+  ],
+  "glossary": [
+    {
+      "term": "ASR",
+      "definition": "Automatic Speech Recognition: converts speech audio into text."
+    },
+    {
+      "term": "TTS",
+      "definition": "Text-to-Speech: synthesizes spoken audio from text output."
+    },
+    {
+      "term": "LM / LLM",
+      "definition": "Language Model / Large Language Model: model that generates text given prompts; TTFT and TPS are relevant latency metrics."
+    },
+    {
+      "term": "TTFT",
+      "definition": "Time-to-First-Token: latency before a model emits its first token; critical for perceived responsiveness."
+    },
+    {
+      "term": "TPS",
+      "definition": "Tokens Per Second: generation speed for the model once it starts emitting tokens."
+    },
+    {
+      "term": "VAT / Time-to-Last-Word",
+      "definition": "ASR indicator measuring when a speech segment is considered complete and sent for processing."
+    },
+    {
+      "term": "Cascade Latency",
+      "definition": "Sum of component latencies (ASR + LM + TTS) excluding network first/last mile."
+    },
+    {
+      "term": "Agent ID",
+      "definition": "Unique identifier for an AI agent/preset used to retrieve logs and diagnostics."
+    }
+  ],
+  "relations": [
+    {
+      "from": "latency_def_001",
+      "to": "cascade_latency_003",
+      "type": "prerequisite"
+    },
+    {
+      "from": "cascade_latency_003",
+      "to": "benchmarking_007",
+      "type": "related"
+    },
+    {
+      "from": "model_selection_008",
+      "to": "custom_lm_009",
+      "type": "extension"
+    },
+    {
+      "from": "avatar_arch_010",
+      "to": "avatar_latency_011",
+      "type": "causes"
+    }
+  ],
+  "integration_recommendations": {
+    "embedding_model": "Recommend using an OpenAI embedding or equivalent high-quality text embedding model (e.g., text-embedding-3-small / text-embedding-3-large or an on-premise alternative) depending on privacy and budget.",
+    "vector_db_options": [
+      "Pinecone",
+      "Weaviate",
+      "Milvus",
+      "RedisVector",
+      "Qdrant"
+    ],
+    "recommended_metadata_dimensions": [
+      "module",
+      "topic",
+      "keywords",
+      "applicable_roles",
+      "difficulty_level",
+      "agent_id",
+      "timestamp"
+    ],
+    "chunking_guidelines": "150-300 tokens per chunk; ensure semantic completeness and self-containment. Keep canonical summaries and titles for each chunk for retrieval augmentation.",
+    "reranking_and_scoring": "Use BM25 or lexical pre-filtering followed by embedding similarity and optional re-ranking with a cross-encoder or LLM for high-precision answers.",
+    "vector_schema_example": {
+      "id": "string",
+      "text": "string",
+      "title": "string",
+      "module": "string",
+      "keywords": [
+        "string"
+      ],
+      "applicable_roles": [
+        "string"
+      ],
+      "difficulty_level": "string",
+      "source": "string",
+      "generated_at": "ISO8601"
+    },
+    "privacy_notes": "If using third-party embedding APIs, consider redaction / PII removal before sending data. For sensitive transcripts, consider on-premise embeddings and self-hosted vector DBs."
+  },
+  "notes": "This knowledge base was synthesized from the uploaded workshop transcript. For full-fidelity traceability, each chunk includes source citation. fileciteturn7file4"
+}
