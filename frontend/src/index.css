@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+/* Video.js custom styling */
+.video-js {
+  font-family: inherit;
+}
+
+.video-js .vjs-big-play-button {
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  line-height: 80px;
+  margin-top: -40px;
+  margin-left: -40px;
+}

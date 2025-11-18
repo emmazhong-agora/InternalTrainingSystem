@@ -1,0 +1,65 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Temporary files
+*.tmp
+*.temp
+*.txt
+body.txt
+output.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+*.tsbuildinfo
+
+# Test files
+test.sql
+
+# Project-specific directories
+Tmp/
+Requirements/
+Files/
+
+# Large media files
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.flv
+*.webm
