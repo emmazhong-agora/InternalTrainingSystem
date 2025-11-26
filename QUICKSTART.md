@@ -10,16 +10,35 @@ Make sure you have:
 - ✅ PostgreSQL 14+
 - ✅ AWS Account (S3 access)
 
-## Step 1: Database (2 minutes)
+## Step 1: Configure Deployment (2 minutes)
+
+```bash
+cd InternalTrainingSystem-Fresh
+cp deployment/config.example.toml deployment/config.toml
+# Edit deployment/config.toml with your database, AWS S3, OpenAI, Agora, Microsoft TTS, and ElevenLabs values
+
+# Generate local env files (optional but handy for direct dev servers)
+python3 deployment/render_env.py \
+  --config deployment/config.toml \
+  --backend-env backend/.env \
+  --frontend-env frontend/.env
+```
+
+> The same `deployment/config.toml` also powers Docker deployments via `./docker-start.sh`.
+
+## Step 2: Database (2 minutes)
 
 ```bash
 # Create database
 psql -U postgres -c "CREATE DATABASE training_system;"
 ```
 
-## Step 2: Backend (5 minutes)
+## Step 3: Backend (5 minutes)
 
 ```bash
+# From project root, refresh backend env if config changed
+python3 deployment/render_env.py --config deployment/config.toml --backend-env backend/.env
+
 # Navigate to backend
 cd InternalTrainingSystem-Fresh/backend
 
@@ -29,10 +48,6 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your PostgreSQL and AWS credentials
 
 # Run migrations
 alembic revision --autogenerate -m "Initial migration"
@@ -44,7 +59,7 @@ uvicorn app.main:app --reload
 
 Backend running at: **http://localhost:8000**
 
-## Step 3: Frontend (5 minutes)
+## Step 4: Frontend (5 minutes)
 
 ```bash
 # Open new terminal
@@ -53,8 +68,8 @@ cd InternalTrainingSystem-Fresh/frontend
 # Install dependencies
 npm install
 
-# Configure environment
-cp .env.example .env
+# From project root, refresh frontend env if config changed
+python3 deployment/render_env.py --config deployment/config.toml --frontend-env frontend/.env
 
 # Start dev server
 npm run dev
@@ -62,7 +77,7 @@ npm run dev
 
 Frontend running at: **http://localhost:5173**
 
-## Step 4: Create Admin User (2 minutes)
+## Step 5: Create Admin User (2 minutes)
 
 ```bash
 # Using curl
@@ -78,7 +93,7 @@ curl -X POST "http://localhost:8000/api/v1/auth/admin/register" \
 
 Or visit: **http://localhost:5173/register**
 
-## Step 5: Login & Test (1 minute)
+## Step 6: Login & Test (1 minute)
 
 1. Visit: **http://localhost:5173/login**
 2. Login with your credentials
@@ -98,21 +113,35 @@ Welcome to the training system.
 This is a test subtitle.
 ```
 
-## Minimum .env Configuration
+## Minimum `deployment/config.toml` Snippet
 
-### Backend .env
-```env
-DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/training_system
-SECRET_KEY=generate-with-python-secrets-token-urlsafe
-AWS_ACCESS_KEY_ID=your-aws-key
-AWS_SECRET_ACCESS_KEY=your-aws-secret
-AWS_BUCKET_NAME=your-bucket-name
-AWS_REGION=us-east-1
-```
+```toml
+[database]
+name = "training_system"
+user = "postgres"
+password = "yourpassword"
+host = "localhost"
+port = 5432
+driver = "postgresql+psycopg"
 
-### Frontend .env
-```env
-VITE_API_URL=http://localhost:8000
+[app]
+secret_key = "generate-with-python-secrets-token-urlsafe"
+cors_origins = ["http://localhost:5173"]
+
+[aws]
+access_key_id = "your-aws-key"
+secret_access_key = "your-aws-secret"
+bucket_name = "your-bucket-name"
+region = "us-east-1"
+
+[openai]
+api_key = "sk-your-key"
+
+[frontend]
+api_base_url = "http://localhost:8000"
+
+[docker]
+apt_mirror = ""  # Optional: e.g., "mirrors.aliyun.com" for China-based servers
 ```
 
 ## Generate Secret Key
@@ -128,7 +157,7 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 - ✅ Check if backend is running on port 8000
 
 ### "CORS error" in browser
-- ✅ Check CORS_ORIGINS in backend .env
+- ✅ Check `cors_origins` inside `deployment/config.toml`
 - ✅ Restart backend server
 
 ### Can't upload video

@@ -1,0 +1,53 @@
+# Copy this file to deployment/config.toml and replace the placeholder values.
+# The deploy script reads deployment/config.toml and generates the .env file
+# consumed by docker-compose for a one-click installation.
+
+[app]
+secret_key = "change-me-in-production"
+algorithm = "HS256"
+access_token_expire_minutes = 1440
+cors_origins = ["http://localhost", "http://localhost:5173"]
+
+[database]
+name = "training_system"
+user = "postgres"
+password = "postgres"
+host = "postgres"      # service name reachable inside the docker network
+port = 5432
+external_host = "localhost"  # optional, documented in output only
+external_port = 5432
+driver = "postgresql+psycopg"
+
+[aws]
+access_key_id = "YOUR_AWS_ACCESS_KEY_ID"
+secret_access_key = "YOUR_AWS_SECRET_ACCESS_KEY"
+bucket_name = "your-training-bucket"
+region = "us-east-1"
+
+[openai]
+api_key = "sk-..."
+
+[agora]
+app_id = ""
+app_certificate = ""
+customer_id = ""
+customer_secret = ""
+project_id = ""
+convo_ai_base_url = "https://api.agora.io/api/conversational-ai-agent/v2/projects"
+agent_uid = 999
+
+[microsoft_tts]
+key = ""
+region = ""
+
+[elevenlabs]
+api_key = ""
+voice_id = ""
+model_id = "eleven_flash_v2_5"
+
+[frontend]
+api_base_url = "http://localhost:8000"
+
+[docker]
+# Optional: override Debian apt mirror (e.g., "mirrors.aliyun.com")
+apt_mirror = ""

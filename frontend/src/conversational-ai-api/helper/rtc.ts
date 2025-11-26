@@ -28,7 +28,11 @@ type AIDenoiserProcessorLevel = 'AGGRESSIVE' | 'MODERATE' | 'LIGHT'
 type IAIDenoiserProcessor = any
 
 // Stub for getAgentToken - this helper is optional
-const getAgentToken = async (userId: string, channel?: string, options?: any) => {
+const getAgentToken = async (
+  userId: string,
+  channel?: string,
+  options?: any
+): Promise<{ data: { appId: string; token: string } }> => {
   throw new Error('getAgentToken not implemented - use VoiceChat token API instead')
 }
 

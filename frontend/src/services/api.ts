@@ -41,6 +41,23 @@ import type {
   VideoStatistics,
   CategoryStatistics,
   PopularContent,
+  Exam,
+  ExamCreate,
+  ExamUpdate,
+  ExamListResponse,
+  ExamPublic,
+  ExamQuestionCreate,
+  ExamQuestionUpdate,
+  ExamQuestion,
+  ExamAttemptCreate,
+  ExamAttempt,
+  ExamAttemptSubmit,
+  ExamAttemptDetail,
+  ExamAttemptListResponse,
+  QuestionGenerationRequest,
+  QuestionGenerationResponse,
+  ExamStatistics,
+  UserExamStatistics,
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -419,6 +436,105 @@ export const statisticsAPI = {
 
   getPopular: async (days: number = 30): Promise<PopularContent> => {
     const response = await api.get<PopularContent>('/statistics/popular', { params: { days } });
+    return response.data;
+  },
+};
+
+// Exam Management API
+export const examAPI = {
+  // Exam CRUD (Admin)
+  createExam: async (data: ExamCreate): Promise<Exam> => {
+    const response = await api.post<Exam>('/exams/', data);
+    return response.data;
+  },
+
+  listExams: async (params?: {
+    page?: number;
+    page_size?: number;
+    search?: string;
+    status_filter?: string;
+  }): Promise<ExamListResponse> => {
+    const response = await api.get<ExamListResponse>('/exams/', { params });
+    return response.data;
+  },
+
+  getExam: async (examId: number): Promise<Exam> => {
+    const response = await api.get<Exam>(`/exams/${examId}`);
+    return response.data;
+  },
+
+  updateExam: async (examId: number, data: ExamUpdate): Promise<Exam> => {
+    const response = await api.put<Exam>(`/exams/${examId}`, data);
+    return response.data;
+  },
+
+  deleteExam: async (examId: number): Promise<void> => {
+    await api.delete(`/exams/${examId}`);
+  },
+
+  // Question Management (Admin)
+  addQuestion: async (examId: number, data: ExamQuestionCreate): Promise<ExamQuestion> => {
+    const response = await api.post<ExamQuestion>(`/exams/${examId}/questions`, data);
+    return response.data;
+  },
+
+  updateQuestion: async (questionId: number, data: ExamQuestionUpdate): Promise<ExamQuestion> => {
+    const response = await api.put<ExamQuestion>(`/exams/questions/${questionId}`, data);
+    return response.data;
+  },
+
+  deleteQuestion: async (questionId: number): Promise<void> => {
+    await api.delete(`/exams/questions/${questionId}`);
+  },
+
+  // AI Question Generation (Admin)
+  generateQuestions: async (data: QuestionGenerationRequest): Promise<QuestionGenerationResponse> => {
+    const response = await api.post<QuestionGenerationResponse>('/exams/generate-questions', data);
+    return response.data;
+  },
+
+  addGeneratedQuestions: async (examId: number, questions: ExamQuestionCreate[]): Promise<Exam> => {
+    const response = await api.post<Exam>(`/exams/${examId}/add-generated-questions`, questions);
+    return response.data;
+  },
+
+  // Public Exam Taking (No Auth)
+  getPublicExam: async (examId: number): Promise<ExamPublic> => {
+    const response = await api.get<ExamPublic>(`/exams/public/${examId}`);
+    return response.data;
+  },
+
+  startAttempt: async (data: ExamAttemptCreate): Promise<ExamAttempt> => {
+    const response = await api.post<ExamAttempt>('/exams/public/start', data);
+    return response.data;
+  },
+
+  submitAttempt: async (attemptId: number, data: ExamAttemptSubmit): Promise<ExamAttemptDetail> => {
+    const response = await api.post<ExamAttemptDetail>(`/exams/public/submit/${attemptId}`, data);
+    return response.data;
+  },
+
+  // Results & Analytics (Admin)
+  listExamAttempts: async (examId: number, params?: {
+    page?: number;
+    page_size?: number;
+  }): Promise<ExamAttemptListResponse> => {
+    const response = await api.get<ExamAttemptListResponse>(`/exams/${examId}/attempts`, { params });
+    return response.data;
+  },
+
+  getAttemptDetails: async (attemptId: number): Promise<ExamAttemptDetail> => {
+    const response = await api.get<ExamAttemptDetail>(`/exams/attempts/${attemptId}`);
+    return response.data;
+  },
+
+  getExamStatistics: async (examId: number): Promise<ExamStatistics> => {
+    const response = await api.get<ExamStatistics>(`/exams/${examId}/statistics`);
+    return response.data;
+  },
+
+  getUserExamStatistics: async (userEmail: string): Promise<UserExamStatistics> => {
+    const response = await api.get<UserExamStatistics>(`/exams/users/${userEmail}/statistics`);
     return response.data;
   },
 };

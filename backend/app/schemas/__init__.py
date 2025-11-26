@@ -2,6 +2,28 @@
 from app.schemas.user import UserCreate, UserLogin, UserResponse, Token
 from app.schemas.video import VideoCreate, VideoUpdate, VideoResponse, VideoCategoryCreate, VideoCategoryResponse
 from app.schemas.progress import ProgressUpdate, ProgressResponse
+from app.schemas.exam import (
+    ExamCreate,
+    ExamUpdate,
+    ExamResponse,
+    ExamPublicResponse,
+    ExamListResponse,
+    ExamQuestionCreate,
+    ExamQuestionUpdate,
+    ExamQuestionResponse,
+    ExamQuestionPublicResponse,
+    ExamAttemptCreate,
+    ExamAttemptSubmit,
+    ExamAttemptResponse,
+    ExamAttemptDetailResponse,
+    ExamAttemptListResponse,
+    ExamAnswerCreate,
+    ExamAnswerResponse,
+    QuestionGenerationRequest,
+    QuestionGenerationResponse,
+    ExamStatistics,
+    UserExamStatistics,
+)
 
 __all__ = [
     "UserCreate",
@@ -15,4 +37,24 @@ __all__ = [
     "VideoCategoryResponse",
     "ProgressUpdate",
     "ProgressResponse",
+    "ExamCreate",
+    "ExamUpdate",
+    "ExamResponse",
+    "ExamPublicResponse",
+    "ExamListResponse",
+    "ExamQuestionCreate",
+    "ExamQuestionUpdate",
+    "ExamQuestionResponse",
+    "ExamQuestionPublicResponse",
+    "ExamAttemptCreate",
+    "ExamAttemptSubmit",
+    "ExamAttemptResponse",
+    "ExamAttemptDetailResponse",
+    "ExamAttemptListResponse",
+    "ExamAnswerCreate",
+    "ExamAnswerResponse",
+    "QuestionGenerationRequest",
+    "QuestionGenerationResponse",
+    "ExamStatistics",
+    "UserExamStatistics",
 ]

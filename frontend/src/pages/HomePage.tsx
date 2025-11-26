@@ -160,6 +160,29 @@ const HomePage: React.FC = () => {
                 <h2 className="text-2xl font-semibold mb-2">Manage Users</h2>
                 <p className="text-gray-600">View and manage user accounts and learning progress</p>
               </Link>
+
+              <Link
+                to="/admin/exams"
+                className="bg-white p-8 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+              >
+                <div className="text-red-600 mb-4">
+                  <svg
+                    className="w-16 h-16 mx-auto"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-semibold mb-2">Manage Exams</h2>
+                <p className="text-gray-600">Create exams, generate questions with AI, and view results</p>
+              </Link>
             </>
           )}
         </div>
@@ -184,10 +207,16 @@ const HomePage: React.FC = () => {
               <span>Search and filter training content easily</span>
             </li>
             {isAdmin && (
-              <li className="flex items-start">
-                <span className="text-blue-600 mr-2">✓</span>
-                <span>Manage and organize training materials (Admin)</span>
-              </li>
+              <>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">✓</span>
+                  <span>Manage and organize training materials (Admin)</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 mr-2">✓</span>
+                  <span>Create exams with AI-generated questions from videos (Admin)</span>
+                </li>
+              </>
             )}
           </ul>
         </div>

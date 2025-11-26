@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.coveragerc
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+docs/
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+backend.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# ChromaDB (will be in volume)
+chroma_db/
+
+# Alembic
+alembic/__pycache__/
+
+# Environment
+.env.example
+.env.local

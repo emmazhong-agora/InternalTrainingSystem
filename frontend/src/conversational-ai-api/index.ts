@@ -48,7 +48,7 @@ const logger = {
   info: (...args: any[]) => console.log('[ConversationalAI]', ...args),
   warn: (...args: any[]) => console.warn('[ConversationalAI]', ...args),
   error: (...args: any[]) => console.error('[ConversationalAI]', ...args),
-  debug: (...args: any[]) => console.debug('[ConversationalAI]', ...args),
+  debug: (...args: any[]) => console.log('[ConversationalAI]', ...args), // Changed from console.debug to console.log for visibility
 }
 
 // Simple ID generator replacement
@@ -288,6 +288,34 @@ export class ConversationalAIAPI extends EventHelper<IConversationalAIAPIEventHa
     this.bindRtmEvents()
 
     this.channel = channel
+
+    try {
+      // Subscribe to RTM stream channel to receive MESSAGE/PRESENCE/STATUS events
+      const { rtmEngine } = this.getCfg()
+      void rtmEngine
+        .subscribe(channel)
+        .then(() => {
+          this.callMessagePrint(
+            ELoggerType.debug,
+            `RTM subscribed to channel: ${channel}`
+          )
+        })
+        .catch((err: unknown) => {
+          this.callMessagePrint(
+            ELoggerType.error,
+            `RTM subscribe failed for channel: ${channel}`,
+            err
+          )
+        })
+    } catch (e) {
+      this.callMessagePrint(
+        ELoggerType.error,
+        'subscribeMessage: failed to subscribe RTM channel',
+        channel,
+        e
+      )
+    }
+
     this.covSubRenderController.setMode(this.renderMode)
     this.covSubRenderController.run()
   }
@@ -307,6 +335,35 @@ export class ConversationalAIAPI extends EventHelper<IConversationalAIAPIEventHa
   public unsubscribe() {
     this.unbindRtcEvents()
     this.unbindRtmEvents()
+
+    try {
+      const { rtmEngine } = this.getCfg()
+      if (this.channel) {
+        const ch = this.channel
+        void rtmEngine
+          .unsubscribe(ch)
+          .then(() => {
+            this.callMessagePrint(
+              ELoggerType.debug,
+              `RTM unsubscribed from channel: ${ch}`
+            )
+          })
+          .catch((err: unknown) => {
+            this.callMessagePrint(
+              ELoggerType.error,
+              `RTM unsubscribe failed for channel: ${ch}`,
+              err
+            )
+          })
+      }
+    } catch (e) {
+      this.callMessagePrint(
+        ELoggerType.error,
+        'unsubscribe: failed to unsubscribe RTM channel',
+        this.channel,
+        e
+      )
+    }
 
     this.channel = null
     this.covSubRenderController.cleanup()
@@ -762,11 +819,12 @@ export class ConversationalAIAPI extends EventHelper<IConversationalAIAPIEventHa
 
   private _handleRtcAudioPTS(pts: number) {
     try {
-      this.callMessagePrint(
-        ELoggerType.debug,
-        `<<< ${ERTCEvents.AUDIO_PTS}`,
-        pts
-      )
+      // Commented out to reduce console noise - audio PTS is too frequent
+      // this.callMessagePrint(
+      //   ELoggerType.debug,
+      //   `<<< ${ERTCEvents.AUDIO_PTS}`,
+      //   pts
+      // )
       this.covSubRenderController.setPts(pts)
     } catch (error) {
       this.callMessagePrint(

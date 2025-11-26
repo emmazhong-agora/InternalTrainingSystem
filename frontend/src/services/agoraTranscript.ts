@@ -43,6 +43,8 @@ export interface IAgentTranscription {
 
 export type TranscriptionMessage = IUserTranscription | IAgentTranscription;
 
+type TranscriptRecord = Partial<IUserTranscription> & Partial<IAgentTranscription>;
+
 export interface TranscriptItem {
   id: string;
   uid: string;
@@ -58,56 +60,82 @@ export interface TranscriptItem {
  *
  * RTM messages come as plain JSON objects or strings
  */
-export function parseTranscriptMessage(messageData: any): TranscriptItem | null {
+function decodeMessagePayload(messageData: unknown): unknown {
+  if (typeof messageData === 'string') {
+    return JSON.parse(messageData);
+  }
+  if (messageData instanceof Uint8Array) {
+    const decoder = new TextDecoder();
+    const messageString = decoder.decode(messageData);
+    return JSON.parse(messageString);
+  }
+  return messageData;
+}
+
+function isTranscriptionRecord(value: unknown): value is TranscriptRecord {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const candidate = value as TranscriptRecord;
+  return (
+    typeof candidate.object === 'string' &&
+    typeof candidate.text === 'string' &&
+    typeof candidate.turn_id === 'number' &&
+    typeof candidate.user_id === 'string'
+  );
+}
+
+export function parseTranscriptMessage(messageData: unknown): TranscriptItem | null {
   console.log('[Parser] ===== parseTranscriptMessage called =====');
   console.log('[Parser] Input type:', typeof messageData);
   console.log('[Parser] Input value:', messageData);
 
   try {
     // If message is a string, parse it as JSON
-    let data: TranscriptionMessage;
-    if (typeof messageData === 'string') {
-      console.log('[Parser] Parsing string as JSON');
-      data = JSON.parse(messageData) as TranscriptionMessage;
-      console.log('[Parser] Parsed JSON:', data);
-    } else if (messageData instanceof Uint8Array) {
-      console.log('[Parser] Converting Uint8Array to string');
-      const decoder = new TextDecoder();
-      const messageString = decoder.decode(messageData);
-      console.log('[Parser] Decoded string:', messageString);
-      data = JSON.parse(messageString) as TranscriptionMessage;
-      console.log('[Parser] Parsed JSON:', data);
-    } else {
-      console.log('[Parser] Using data as-is (already an object)');
-      data = messageData as TranscriptionMessage;
+    const decoded = decodeMessagePayload(messageData);
+    if (!isTranscriptionRecord(decoded)) {
+      console.log('[Parser] ⏭️  Skipping message that does not match transcript schema');
+      return null;
     }
+    const data = decoded;
+    const { object, text, turn_id, user_id } = data;
 
-    console.log('[Parser] Message object type:', data.object);
-    console.log('[Parser] Message text:', data.text);
-
-    // Only process transcription messages
     if (
-      data.object !== TranscriptMessageType.USER_TRANSCRIPTION &&
-      data.object !== TranscriptMessageType.AGENT_TRANSCRIPTION
+      typeof object !== 'string' ||
+      typeof text !== 'string' ||
+      typeof turn_id !== 'number' ||
+      typeof user_id !== 'string'
     ) {
-      console.log('[Parser] ⏭️  Skipping non-transcription message type:', data.object);
+      console.log('[Parser] ⏭️  Missing required transcript fields');
       return null;
     }
 
-    const isUser = data.object === TranscriptMessageType.USER_TRANSCRIPTION;
+    console.log('[Parser] Message object type:', object);
+    console.log('[Parser] Message text:', text);
+
+    // Only process transcription messages
+    if (
+      object !== TranscriptMessageType.USER_TRANSCRIPTION &&
+      object !== TranscriptMessageType.AGENT_TRANSCRIPTION
+    ) {
+      console.log('[Parser] ⏭️  Skipping non-transcription message type:', object);
+      return null;
+    }
+
+    const isUser = object === TranscriptMessageType.USER_TRANSCRIPTION;
     console.log('[Parser] Is user message:', isUser);
 
     const status = isUser
-      ? ((data as IUserTranscription).final ? TurnStatus.END : TurnStatus.IN_PROGRESS)
-      : (data as IAgentTranscription).turn_status;
+      ? (data.final ? TurnStatus.END : TurnStatus.IN_PROGRESS)
+      : (typeof data.turn_status === 'number' ? data.turn_status : TurnStatus.IN_PROGRESS);
     console.log('[Parser] Message status:', status);
 
     const result = {
-      id: `${data.turn_id}-${data.user_id}-${data.start_ms}`,
-      uid: data.user_id,
-      turn_id: data.turn_id,
+      id: `${turn_id}-${user_id}-${data.start_ms}`,
+      uid: user_id,
+      turn_id,
       timestamp: Date.now(),
-      text: data.text.trim(),
+      text: text.trim(),
       status,
       type: isUser ? 'user' as const : 'assistant' as const,
     };

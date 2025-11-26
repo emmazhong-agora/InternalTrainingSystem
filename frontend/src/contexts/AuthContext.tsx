@@ -5,6 +5,8 @@ import { authAPI } from '../services/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  error: string | null;
+  clearError: () => void;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   registerAdmin: (data: RegisterData) => Promise<void>;
@@ -28,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if user is logged in on mount
@@ -48,34 +51,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
-    const response: AuthResponse = await authAPI.login(credentials);
-    localStorage.setItem('access_token', response.access_token);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    setUser(response.user);
+    setError(null);
+    try {
+      const response: AuthResponse = await authAPI.login(credentials);
+      localStorage.setItem('access_token', response.access_token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      setUser(response.user);
+    } catch (err: any) {
+      const detail =
+        err.response?.data?.detail ||
+        err.message ||
+        'Failed to login. Please check your credentials.';
+      setError(detail);
+      throw err;
+    }
   };
 
   const register = async (data: RegisterData) => {
-    await authAPI.register(data);
-    // After registration, automatically log in
-    await login({ username: data.username, password: data.password });
+    setError(null);
+    try {
+      await authAPI.register(data);
+      await login({ username: data.username, password: data.password });
+    } catch (err: any) {
+      const detail =
+        err.response?.data?.detail ||
+        err.message ||
+        'Failed to register. Please check your input and try again.';
+      setError(detail);
+      throw err;
+    }
   };
 
   const registerAdmin = async (data: RegisterData) => {
-    await authAPI.registerAdmin(data);
-    // After registration, automatically log in
-    await login({ username: data.username, password: data.password });
+    setError(null);
+    try {
+      await authAPI.registerAdmin(data);
+      await login({ username: data.username, password: data.password });
+    } catch (err: any) {
+      const detail =
+        err.response?.data?.detail ||
+        err.message ||
+        'Failed to register admin user.';
+      setError(detail);
+      throw err;
+    }
   };
 
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     setUser(null);
+    setError(null);
     window.location.href = '/login';
   };
 
   const value: AuthContextType = {
     user,
     loading,
+    error,
+    clearError: () => setError(null),
     login,
     register,
     registerAdmin,

@@ -41,9 +41,9 @@ AgoraRTC.setLogLevel(0); // 0 = DEBUG, 1 = INFO, 2 = WARNING, 3 = ERROR, 4 = NON
 
 // CRITICAL: Enable audio PTS metadata BEFORE creating RTC client
 // This is required for the Conversational AI API to receive transcripts
-(AgoraRTC as any).setParameter("ENABLE_AUDIO_PTS_METADATA", true);
+(AgoraRTC as any).setParameter("ENABLE_AUDIO_PTS", true);
 console.log('[AGORA SDK] ✅ Audio PTS metadata enabled for transcript delivery');
-
+(AgoraRTC as any).setParameter('{"rtc.log_external_input": true}')
 // Create Agora RTC client with auto-subscribe enabled
 const agoraClient = AgoraRTC.createClient({
   mode: 'rtc',
@@ -80,21 +80,21 @@ const RemoteAudioPlayer: React.FC<{ user: any }> = ({ user }) => {
         playAttemptRef.current += 1;
         const attemptNumber = playAttemptRef.current;
 
-        console.log(`[RemoteAudioPlayer] Attempt #${attemptNumber}: Playing audio from user ${user.uid}`);
-        console.log(`[RemoteAudioPlayer] Audio track object:`, user.audioTrack);
-        console.log(`[RemoteAudioPlayer] Audio track type:`, user.audioTrack.constructor.name);
-        console.log(`[RemoteAudioPlayer] Audio track isPlaying:`, user.audioTrack.isPlaying);
-        console.log(`[RemoteAudioPlayer] Audio track enabled:`, user.audioTrack.enabled);
-        console.log(`[RemoteAudioPlayer] Audio track muted:`, user.audioTrack.muted);
-        console.log(`[RemoteAudioPlayer] Audio track volume:`, user.audioTrack.getVolumeLevel?.());
+        // console.log(`[RemoteAudioPlayer] Attempt #${attemptNumber}: Playing audio from user ${user.uid}`);
+        // console.log(`[RemoteAudioPlayer] Audio track object:`, user.audioTrack);
+        // console.log(`[RemoteAudioPlayer] Audio track type:`, user.audioTrack.constructor.name);
+        // console.log(`[RemoteAudioPlayer] Audio track isPlaying:`, user.audioTrack.isPlaying);
+        // console.log(`[RemoteAudioPlayer] Audio track enabled:`, user.audioTrack.enabled);
+        // console.log(`[RemoteAudioPlayer] Audio track muted:`, user.audioTrack.muted);
+        // console.log(`[RemoteAudioPlayer] Audio track volume:`, user.audioTrack.getVolumeLevel?.());
 
         audioTrackRef.current = user.audioTrack;
 
         console.log(`[RemoteAudioPlayer] Calling audioTrack.play()...`);
         const playResult = await user.audioTrack.play();
-        console.log(`[RemoteAudioPlayer] ✅ audioTrack.play() completed successfully for user ${user.uid}`);
-        console.log(`[RemoteAudioPlayer] Play result:`, playResult);
-        console.log(`[RemoteAudioPlayer] After play - isPlaying:`, user.audioTrack.isPlaying);
+        // console.log(`[RemoteAudioPlayer] ✅ audioTrack.play() completed successfully for user ${user.uid}`);
+        // console.log(`[RemoteAudioPlayer] Play result:`, playResult);
+        // console.log(`[RemoteAudioPlayer] After play - isPlaying:`, user.audioTrack.isPlaying);
 
       } catch (error) {
         console.error(`[RemoteAudioPlayer] ❌ Error playing audio from user ${user.uid}:`, error);
@@ -174,6 +174,8 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
   };
 
   useEffect(() => {
+    console.log('[UI] transcriptMessages updated, count:', transcriptMessages.length);
+    console.log('[UI] Messages:', transcriptMessages);
     scrollTranscriptToBottom();
   }, [transcriptMessages]);
 
@@ -279,10 +281,14 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
         const rtmClient = new AgoraRTM.RTM(channelInfo.app_id, userId, rtmConfig);
         rtmClientRef.current = rtmClient;
 
-        // Add event listeners for debugging
+        // Add status event listener for debugging (other events handled by ConversationalAIAPI)
         rtmClient.addEventListener('status', (status: any) => {
           console.log('[RTM] Status change:', status);
         });
+
+        // Note: Don't add 'message' listener here - let ConversationalAIAPI handle it
+        // Adding multiple listeners can cause conflicts with event processing
+
 
         console.log('[ConversationalAI] Logging into RTM...');
         await rtmClient.login({ token: channelInfo.rtm_token });
@@ -290,12 +296,17 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
 
         // Initialize Conversational AI API
         console.log('[ConversationalAI] Initializing Conversational AI API');
+        console.log('[ConversationalAI] RTC Client:', client);
+        console.log('[ConversationalAI] RTM Client:', rtmClient);
         const conversationalAIAPI = ConversationalAIAPI.init({
-          rtcEngine: client,
+          // Cast to bridge agora-rtc-react and agora-rtc-sdk-ng client types
+          rtcEngine: client as unknown as import('agora-rtc-sdk-ng').IAgoraRTCClient,
           rtmEngine: rtmClient,
-          renderMode: ETranscriptHelperMode.WORD, // Word-by-word rendering
+          enableLog: true,  // CRITICAL: Enable logging to see RTM message processing
+          renderMode: ETranscriptHelperMode.TEXT, // Use TEXT mode for reliable transcript delivery (same as basicVideoCall.js)
         });
         conversationalAIAPIRef.current = conversationalAIAPI;
+        console.log('[ConversationalAI] API instance created:', conversationalAIAPI);
 
         // Subscribe to transcript updates
         console.log('[ConversationalAI] Subscribing to TRANSCRIPT_UPDATED events');
@@ -306,23 +317,34 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
             console.log('[ConversationalAI] ✉️  TRANSCRIPT_UPDATED event received');
             console.log('[ConversationalAI] Total transcripts:', transcripts.length);
             console.log('[ConversationalAI] User UID from channelInfo:', channelInfo.uid);
+            console.log('[ConversationalAI] Full transcript data:', JSON.stringify(transcripts, null, 2));
             console.log('='.repeat(80));
 
             // Convert transcripts to messages
+            // Note: Do NOT filter out empty text here! In WORD mode, transcripts start empty
+            // and get filled progressively. We'll hide empty ones in the UI instead.
             const messages: TranscriptMessage[] = transcripts.map((t) => {
               // Compare transcript UID with the user's actual UID from channelInfo
               // User UID is a random 6-digit number, agent UID is 999
-              const role = Number(t.uid) === channelInfo.uid ? 'user' : 'assistant';
+              // Note: The Conversational AI API may normalize UIDs - user might be 0
+              const transcriptUid = Number(t.uid);
+              const userUid = channelInfo.uid;
+
+              // Check if this is the user's message
+              // The user's UID could be either the channelInfo.uid or 0 (normalized)
+              const isUserMessage = transcriptUid === userUid || transcriptUid === 0;
+              const role = isUserMessage ? 'user' : 'assistant';
 
               // Add status indicator for in-progress messages
-              let content = t.text;
+              // Keep original text (don't trim) to preserve progressive updates
+              let content = t.text || '';
               if (t.status === ETurnStatus.IN_PROGRESS) {
                 content += ' [...]';
               } else if (t.status === ETurnStatus.INTERRUPTED) {
                 content += ' [interrupted]';
               }
 
-              console.log(`[Transcript] UID=${t.uid}, Role=${role}, Status=${t.status}, Text="${content}"`);
+              console.log(`[Transcript] UID=${t.uid}, UserUID=${userUid}, Role=${role}, Status=${t.status}, Text="${content}"`);
 
               return {
                 id: `${t.turn_id}-${t.uid}-${t._time}`,
@@ -332,8 +354,9 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
               };
             });
 
+            console.log('[ConversationalAI] ✅ Setting', messages.length, 'messages to state');
             setTranscriptMessages(messages);
-            console.log('[ConversationalAI] ✅ UI updated with', messages.length, 'messages');
+            console.log('[ConversationalAI] ✅ State updated successfully');
           }
         );
 
@@ -353,7 +376,7 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
           }
         );
 
-        // Subscribe to channel messages
+        // Subscribe to channel messages - this internally handles RTM subscriptions
         console.log(`[ConversationalAI] Subscribing to channel: "${channelInfo.channel}"`);
         conversationalAIAPI.subscribeMessage(channelInfo.channel);
         console.log('[ConversationalAI] ✅ Subscribed to channel messages');
@@ -416,8 +439,6 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
           console.log('[AGORA EVENT] ✅ Audio track is available on user object');
           console.log('[AGORA EVENT] Audio track details:', {
             isPlaying: user.audioTrack.isPlaying,
-            enabled: user.audioTrack.enabled,
-            muted: user.audioTrack.muted,
           });
 
           // Play the audio track immediately
@@ -490,8 +511,6 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
       if (user.audioTrack) {
         console.log(`[REMOTE USERS] User ${user.uid} audio track details:`, {
           isPlaying: user.audioTrack.isPlaying,
-          enabled: user.audioTrack.enabled,
-          muted: user.audioTrack.muted,
           volume: user.audioTrack.getVolumeLevel?.(),
         });
       }
@@ -519,8 +538,8 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
         requester_id: tokenResponse.uid,
         channel_name: tokenResponse.channel,
         video_id: videoId,  // Pass video ID to retrieve knowledge base
-        input_modalities: ['audio'],
-        output_modalities: ['text', 'audio'],
+        input_modalities: ['text'],
+        output_modalities: ['text'],
         tts_vendor: ttsVendor,
         voice_name: voiceName || undefined,
       });
@@ -612,8 +631,8 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
         </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
+      {/* Content - Scrollable container */}
+      <div className="flex-1 flex flex-col p-6 space-y-6 overflow-hidden">
         {error && (
           <div className="w-full p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-600">{error}</p>
@@ -622,7 +641,7 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
 
         {!channelInfo ? (
           /* Not connected */
-          <div className="w-full max-w-md space-y-6">
+          <div className="w-full max-w-md space-y-6 mx-auto">
             <div className="text-center">
               <div className="w-24 h-24 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
                 <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -690,9 +709,9 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
           </div>
         ) : (
           /* Connected */
-          <div className="w-full h-full flex flex-col space-y-4">
+          <div className="w-full flex-1 flex flex-col space-y-4 overflow-hidden">
             {/* Connection Status */}
-            <div className="flex items-center justify-between px-4">
+            <div className="flex items-center justify-between px-4 flex-shrink-0">
               <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
                 <span className="text-sm text-gray-600">
@@ -730,7 +749,7 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
 
             {/* Audio Enable Button (when autoplay is blocked) */}
             {audioBlocked && (
-              <div className="px-4">
+              <div className="px-4 flex-shrink-0">
                 <button
                   onClick={async () => {
                     console.log('[AUDIO ENABLE] User clicked to enable audio');
@@ -791,7 +810,9 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
                     {transcriptMessages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} ${
+                          message.content === '' ? 'hidden' : ''
+                        }`}
                       >
                         <div
                           className={`max-w-[80%] rounded-lg px-4 py-2 ${
@@ -819,7 +840,7 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
             </div>
 
             {/* Microphone Control */}
-            <div className="flex items-center justify-center space-x-4 px-4">
+            <div className="flex items-center justify-center space-x-4 px-4 flex-shrink-0">
               <button
                 onClick={handleToggleMic}
                 className={`p-4 rounded-full transition-colors ${
@@ -850,7 +871,7 @@ const VoiceChatInner: React.FC<VoiceChatProps> = ({ videoId, currentTimestamp, o
             </div>
 
             {/* Instructions */}
-            <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg mx-4">
+            <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg mx-4 flex-shrink-0">
               <p className="text-sm text-blue-800">
                 <strong>Note:</strong> Using Agora Conversational AI API for real-time transcript delivery.
                 Transcripts are automatically delivered via RTM and rendered word-by-word.

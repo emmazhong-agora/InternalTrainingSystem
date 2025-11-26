@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.routes import auth, videos, progress, materials, chat, agora, prompts, users, categories, statistics
+from app.api.routes import auth, videos, progress, materials, chat, agora, prompts, users, categories, statistics, exams
 from app.db.session import engine, Base
 
 # Create database tables
@@ -37,6 +37,7 @@ app.include_router(agora.router, prefix=f"{settings.API_V1_STR}/agora", tags=["A
 app.include_router(prompts.router, prefix=f"{settings.API_V1_STR}/prompts", tags=["Prompt Management"])
 app.include_router(categories.router, prefix=f"{settings.API_V1_STR}/categories", tags=["Category Management"])
 app.include_router(statistics.router, prefix=f"{settings.API_V1_STR}/statistics", tags=["Statistics"])
+app.include_router(exams.router, prefix=f"{settings.API_V1_STR}/exams", tags=["Exam Management"])
 
 
 @app.get("/")

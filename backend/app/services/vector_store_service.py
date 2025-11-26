@@ -216,6 +216,51 @@ class VectorStoreService:
             logger.error(f"Error deleting embeddings for video {video_id}: {e}")
             return False
 
+    def get_all_chunks(self, video_id: int) -> List[Dict]:
+        """
+        Get all transcript chunks for a video from the vector store.
+
+        Args:
+            video_id: The ID of the video
+
+        Returns:
+            List of all chunks with text and metadata, ordered by index
+        """
+        try:
+            collection = self._get_or_create_collection(video_id)
+
+            # Check if collection has any documents
+            count = collection.count()
+            if count == 0:
+                logger.warning(f"Collection for video {video_id} is empty")
+                return []
+
+            # Get all documents from the collection
+            results = collection.get(
+                include=['documents', 'metadatas']
+            )
+
+            # Format results
+            chunks = []
+            if results['documents'] and len(results['documents']) > 0:
+                for i in range(len(results['documents'])):
+                    chunk = {
+                        'text': results['documents'][i],
+                        'metadata': results['metadatas'][i],
+                        'id': results['ids'][i]
+                    }
+                    chunks.append(chunk)
+
+            # Sort by index to maintain order
+            chunks.sort(key=lambda x: x['metadata'].get('index', 0))
+
+            logger.info(f"Retrieved {len(chunks)} chunks for video {video_id}")
+            return chunks
+
+        except Exception as e:
+            logger.error(f"Error getting all chunks for video {video_id}: {e}")
+            return []
+
     def get_collection_info(self, video_id: int) -> Dict:
         """
         Get information about a video's collection.

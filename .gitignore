@@ -55,6 +55,7 @@ test.sql
 Tmp/
 Requirements/
 Files/
+deployment/config.toml
 
 # Large media files
 *.mp4

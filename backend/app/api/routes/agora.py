@@ -14,8 +14,9 @@ import os
 # Disable SSL warnings when bypassing verification
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Import Version 2 Token Builders (generates 007 prefix tokens)
-from app.token_builders import RtcTokenBuilder, RtmTokenBuilder, Role_Publisher
+# Import Version 2 Token Builder (generates 007 prefix tokens)
+# Using build_token_with_rtm2 for unified RTC+RTM tokens
+from app.token_builders import RtcTokenBuilder, Role_Publisher
 
 from app.db.session import get_db
 from app.models.user import User
@@ -115,34 +116,31 @@ async def generate_agora_token(
         token_expire = 3600
         privilege_expire = 3600
 
-        # Generate RTC token for audio/video using Version 2 builder with the generated UID
-        rtc_token = RtcTokenBuilder.build_token_with_uid(
+        # Generate unified RTC+RTM token using build_token_with_rtm2
+        # This single token works for both RTC (audio/video) and RTM (messaging/transcripts)
+        rtm_uid_str = str(generated_uid)
+        unified_token = RtcTokenBuilder.build_token_with_rtm2(
             app_id=settings.AGORA_APP_ID,
             app_certificate=settings.AGORA_APP_CERTIFICATE,
             channel_name=channel,
-            uid=generated_uid,
-            role=Role_Publisher,
-            token_expire=token_expire,
-            privilege_expire=privilege_expire
+            rtc_account=generated_uid,  # RTC account (can be int or string)
+            rtc_role=Role_Publisher,
+            rtc_token_expire=token_expire,
+            join_channel_privilege_expire=privilege_expire,
+            pub_audio_privilege_expire=privilege_expire,
+            pub_video_privilege_expire=privilege_expire,
+            pub_data_stream_privilege_expire=privilege_expire,
+            rtm_user_id=rtm_uid_str,  # RTM uses string user ID
+            rtm_token_expire=token_expire
         )
 
-        # Generate RTM token with STRING UID (RTM requires string user IDs)
-        # RTC uses integer UID, RTM uses string UID - both represent the same user
-        rtm_uid_str = str(generated_uid)
-        rtm_token = RtmTokenBuilder.build_token(
-            app_id=settings.AGORA_APP_ID,
-            app_certificate=settings.AGORA_APP_CERTIFICATE,
-            user_id=rtm_uid_str,  # Pass string UID for RTM
-            expire=token_expire
-        )
-
-        logger.info(f"Generated Agora tokens (v2) for user {current_user.id}, channel: {channel}")
+        logger.info(f"Generated unified Agora RTC+RTM token (v2) for user {current_user.id}, channel: {channel}")
         logger.info(f"RTC UID (integer): {generated_uid}, RTM UID (string): '{rtm_uid_str}'")
-        logger.info(f"RTC Token prefix: {rtc_token[:3]}, RTM Token prefix: {rtm_token[:3]}")
+        logger.info(f"Unified Token prefix: {unified_token[:3]}")
 
         return GenerateTokenResponse(
-            token=rtc_token,
-            rtm_token=rtm_token,
+            token=unified_token,  # Use unified token for RTC
+            rtm_token=unified_token,  # Same unified token works for RTM
             uid=generated_uid,
             channel=channel,
             app_id=settings.AGORA_APP_ID
@@ -179,19 +177,26 @@ async def invite_agent(
                 detail="Agora Conversational AI credentials not configured"
             )
 
-        # Generate token for agent using Version 2 builder
+        # Generate unified token for agent using build_token_with_rtm2
+        # Agent gets both RTC and RTM capabilities in a single token
         agent_uid = 999  # Fixed UID for agent
         token_expire = 3600  # 1 hour
         privilege_expire = 3600
+        agent_uid_str = str(agent_uid)
 
-        agent_token = RtcTokenBuilder.build_token_with_uid(
+        agent_token = RtcTokenBuilder.build_token_with_rtm2(
             app_id=settings.AGORA_APP_ID,
             app_certificate=settings.AGORA_APP_CERTIFICATE,
             channel_name=request.channel_name,
-            uid=agent_uid,
-            role=Role_Publisher,
-            token_expire=token_expire,
-            privilege_expire=privilege_expire
+            rtc_account=agent_uid,  # RTC account
+            rtc_role=Role_Publisher,
+            rtc_token_expire=token_expire,
+            join_channel_privilege_expire=privilege_expire,
+            pub_audio_privilege_expire=privilege_expire,
+            pub_video_privilege_expire=privilege_expire,
+            pub_data_stream_privilege_expire=privilege_expire,
+            rtm_user_id=agent_uid_str,  # RTM user ID (string)
+            rtm_token_expire=token_expire
         )
 
         # Generate unique agent name
@@ -226,6 +231,13 @@ async def invite_agent(
                         knowledge_context = "\n".join(transcript_texts)
                         logger.info(f"Retrieved {len(chunks)} transcript chunks for video {request.video_id}")
                         logger.info(f"Knowledge context length: {len(knowledge_context)} characters")
+
+                        # Limit knowledge context to prevent request size issues (max ~10000 chars)
+                        MAX_KNOWLEDGE_CONTEXT_LENGTH = 10000
+                        if len(knowledge_context) > MAX_KNOWLEDGE_CONTEXT_LENGTH:
+                            logger.warning(f"Knowledge context too large ({len(knowledge_context)} chars), truncating to {MAX_KNOWLEDGE_CONTEXT_LENGTH} chars")
+                            knowledge_context = knowledge_context[:MAX_KNOWLEDGE_CONTEXT_LENGTH] + "...\n\n[Note: Transcript truncated due to length. Ask me for specific details if needed.]"
+                            logger.info(f"Truncated knowledge context length: {len(knowledge_context)} characters")
                 else:
                     logger.warning(f"No knowledge base found for video {request.video_id}")
             except Exception as e:
@@ -322,13 +334,15 @@ async def invite_agent(
                         "top_p": base_prompt_config.get("top_p", 0.9)
                     }
                 },
-                "tts": tts_config
-            },
-            "advanced_features": {
-                "enable_rtm": True  # Enable RTM for transcript delivery
-            },
-            "parameters": {
-                "data_channel": "rtm"  # Use RTM as data channel for transcripts
+                "tts": tts_config,
+                "advanced_features": {
+                    "enable_rtm": True  # Enable RTM for transcript delivery
+                },
+                "parameters": {
+                    "data_channel": "rtm",  # Use RTM as data channel for transcripts
+                    "enable_metrics": True,
+                    "enable_error_messages": True
+                }
             }
         }
 
@@ -372,6 +386,9 @@ async def invite_agent(
 
         # Try with SSL verification disabled (can help with SSL issues)
         try:
+            logger.info("Sending POST request to Agora API...")
+            logger.info(f"Request body size: {len(json.dumps(request_body))} bytes")
+
             response = requests.post(url, json=request_body, headers=headers, timeout=30, verify=True)
 
             print("=" * 80)
@@ -386,6 +403,31 @@ async def invite_agent(
             logger.info(f"Response status code: {response.status_code}")
             logger.info(f"Response body: {response.text}")
             response.raise_for_status()
+        except requests.exceptions.ConnectionError as conn_err:
+            logger.error(f"Connection error occurred: {conn_err}")
+            logger.error(f"This might be due to request size ({len(json.dumps(request_body))} bytes) or network issues")
+            print(f"[AGORA] CONNECTION ERROR: {conn_err}")
+            print(f"[AGORA] Request body size: {len(json.dumps(request_body))} bytes")
+
+            # If the request is very large, try reducing the knowledge context
+            if len(json.dumps(request_body)) > 50000:  # 50KB threshold
+                logger.warning("Request is very large, trying with reduced knowledge context...")
+                # Truncate knowledge context to first 5000 characters
+                if len(system_messages) > 1:
+                    original_content = system_messages[1]['content']
+                    system_messages[1]['content'] = original_content[:5000] + "...\n\n[Note: Knowledge context truncated due to size limits]"
+                    request_body['properties']['llm']['system_messages'] = system_messages
+                    logger.info(f"Reduced request body size: {len(json.dumps(request_body))} bytes")
+
+                    # Retry with reduced context
+                    response = requests.post(url, json=request_body, headers=headers, timeout=30, verify=True)
+                    logger.info(f"Retry response status code: {response.status_code}")
+                    logger.info(f"Retry response body: {response.text}")
+                    response.raise_for_status()
+                else:
+                    raise
+            else:
+                raise
         except requests.exceptions.SSLError as ssl_err:
             logger.warning(f"SSL error occurred, retrying without SSL verification: {ssl_err}")
             print(f"[AGORA] SSL error, retrying without verification: {ssl_err}")

@@ -12,6 +12,25 @@ Before you begin, ensure you have the following installed:
 - **AWS Account** - For S3 storage
 - **Git** - For version control
 
+## Unified Configuration
+
+All secrets now live in a single file: `deployment/config.toml`.
+
+```bash
+cd InternalTrainingSystem-Fresh
+cp deployment/config.example.toml deployment/config.toml
+# Edit deployment/config.toml with your database, AWS, OpenAI, Agora, Microsoft TTS, and ElevenLabs values
+
+# Optional: generate local env files for direct backend/frontend dev servers
+python3 deployment/render_env.py \
+  --config deployment/config.toml \
+  --backend-env backend/.env \
+  --frontend-env frontend/.env
+```
+
+Any time you update `deployment/config.toml`, rerun the `render_env.py` command to refresh the derived `.env` files. Docker workflows (`./docker-start.sh dev` / `prod`) regenerate `.env` automatically using the same config file.
+If you deploy from regions with restricted access to `deb.debian.org`, set `[docker] apt_mirror = "your.mirror.domain"` so the backend image rewrites its apt sources before installing dependencies.
+
 ## Part 1: Database Setup
 
 ### 1.1 Install PostgreSQL
@@ -82,15 +101,15 @@ pip install -r requirements.txt
 
 ### 3.4 Configure Environment Variables
 
-```bash
-# Copy example env file
-cp .env.example .env
+Update `deployment/config.toml` with your backend credentials. Then render `backend/.env`
+so FastAPI can load the values during local development:
 
-# Edit .env file with your settings
-nano .env  # or use your preferred editor
+```bash
+# Run from project root whenever config changes
+python3 deployment/render_env.py --config deployment/config.toml --backend-env backend/.env
 ```
 
-Update the following in `.env`:
+Key fields inside `deployment/config.toml`:
 
 ```env
 # Database
@@ -155,18 +174,12 @@ npm install
 
 ### 4.3 Configure Environment Variables
 
+`deployment/config.toml` also controls the frontend. To run `npm run dev`, render the Vite
+environment file based on your config:
+
 ```bash
-# Copy example env file
-cp .env.example .env
-
-# Edit .env file
-nano .env
-```
-
-Update the following in `.env`:
-
-```env
-VITE_API_URL=http://localhost:8000
+# Run from project root whenever config changes
+python3 deployment/render_env.py --config deployment/config.toml --frontend-env frontend/.env
 ```
 
 ### 4.4 Start Frontend Development Server
@@ -255,18 +268,18 @@ You can add subtitles and transcripts in VTT format.
   # Linux
   sudo systemctl status postgresql
   ```
-- **Check DATABASE_URL**: Verify connection string in `.env`
+- **Check DATABASE_URL**: Verify the `[database]` block inside `deployment/config.toml` and rerun `deployment/render_env.py`
 - **Port conflict**: Ensure port 8000 is not in use
 
 #### Frontend won't start
 
 - **Node modules**: Try deleting `node_modules` and running `npm install` again
 - **Port conflict**: Ensure port 5173 is not in use
-- **Check API connection**: Verify `VITE_API_URL` in `.env`
+- **Check API connection**: Ensure the `[frontend]` section of `deployment/config.toml` points to your backend and rerun `deployment/render_env.py --frontend-env frontend/.env`
 
 #### Video upload fails
 
-- **Check S3 credentials**: Verify AWS credentials in backend `.env`
+- **Check S3 credentials**: Verify the `[aws]` block in `deployment/config.toml` and rerun `deployment/render_env.py`
 - **Check bucket permissions**: Ensure IAM user has write access
 - **File size**: Check if file exceeds size limit (default 500MB)
 - **Check CORS**: Ensure S3 bucket has proper CORS configuration
@@ -276,7 +289,7 @@ You can add subtitles and transcripts in VTT format.
 - **Check credentials**: Verify username/password
 - **Check backend**: Ensure backend is running
 - **Browser console**: Check for error messages
-- **CORS errors**: Verify CORS_ORIGINS in backend `.env`
+- **CORS errors**: Update `cors_origins` in `deployment/config.toml` and rerun `deployment/render_env.py`
 
 ### Database Reset
 
@@ -299,7 +312,7 @@ For production deployment, consider:
 1. **Backend**:
    - Use production WSGI server (Gunicorn + Uvicorn)
    - Set up HTTPS
-   - Use environment-specific `.env` files
+   - Use environment-specific copies of `deployment/config.toml`
    - Set DEBUG=False
 
 2. **Frontend**:
@@ -331,7 +344,7 @@ The next phase will add:
 
 To prepare for Phase 2:
 - Get an OpenAI API key
-- Add to backend `.env`: `OPENAI_API_KEY=your-key`
+- Add it to the `[openai]` section inside `deployment/config.toml`, then rerun the render script
 
 ### Resources
 

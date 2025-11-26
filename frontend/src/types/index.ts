@@ -199,6 +199,7 @@ export interface GenerateTokenRequest {
 
 export interface GenerateTokenResponse {
   token: string;
+  rtm_token: string;
   uid: number;
   channel: string;
   app_id: string;
@@ -446,4 +447,234 @@ export interface PopularContent {
   most_completed_videos: Array<{ video_id: number; title: string; completions: number }>;
   most_discussed_videos: Array<{ video_id: number; title: string; chat_sessions: number }>;
   popular_categories: Array<{ category_id: number; name: string; views: number }>;
+}
+
+// Exam Management types
+export enum QuestionType {
+  MULTIPLE_CHOICE = "multiple_choice",
+  TRUE_FALSE = "true_false",
+  SHORT_ANSWER = "short_answer"
+}
+
+export enum ExamStatus {
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  ARCHIVED = "archived"
+}
+
+export interface ExamQuestion {
+  id: number;
+  exam_id: number;
+  question_type: QuestionType;
+  question_text: string;
+  points: number;
+  options?: string[];
+  correct_answer: string;
+  explanation?: string;
+  sort_order: number;
+  source_video_id?: number;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ExamQuestionPublic {
+  id: number;
+  question_type: QuestionType;
+  question_text: string;
+  points: number;
+  options?: string[];
+  sort_order: number;
+}
+
+export interface ExamQuestionCreate {
+  question_type: QuestionType;
+  question_text: string;
+  points?: number;
+  options?: string[];
+  correct_answer: string;
+  explanation?: string;
+  sort_order?: number;
+  source_video_id?: number;
+}
+
+export interface ExamQuestionUpdate {
+  question_type?: QuestionType;
+  question_text?: string;
+  points?: number;
+  options?: string[];
+  correct_answer?: string;
+  explanation?: string;
+  sort_order?: number;
+}
+
+export interface Exam {
+  id: number;
+  title: string;
+  description?: string;
+  time_limit_minutes?: number;
+  pass_threshold_percentage: number;
+  max_attempts?: number;
+  status: ExamStatus;
+  available_from?: string;
+  available_until?: string;
+  show_correct_answers: boolean;
+  randomize_questions: boolean;
+  randomize_options: boolean;
+  created_by: number;
+  created_at: string;
+  updated_at?: string;
+  questions: ExamQuestion[];
+  video_ids: number[];
+  total_points: number;
+  question_count: number;
+}
+
+export interface ExamPublic {
+  id: number;
+  title: string;
+  description?: string;
+  time_limit_minutes?: number;
+  pass_threshold_percentage: number;
+  max_attempts?: number;
+  available_from?: string;
+  available_until?: string;
+  questions: ExamQuestionPublic[];
+  total_points: number;
+  question_count: number;
+}
+
+export interface ExamCreate {
+  title: string;
+  description?: string;
+  time_limit_minutes?: number;
+  pass_threshold_percentage?: number;
+  max_attempts?: number;
+  status?: ExamStatus;
+  available_from?: string;
+  available_until?: string;
+  show_correct_answers?: boolean;
+  randomize_questions?: boolean;
+  randomize_options?: boolean;
+  video_ids?: number[];
+}
+
+export interface ExamUpdate {
+  title?: string;
+  description?: string;
+  time_limit_minutes?: number;
+  pass_threshold_percentage?: number;
+  max_attempts?: number;
+  status?: ExamStatus;
+  available_from?: string;
+  available_until?: string;
+  show_correct_answers?: boolean;
+  randomize_questions?: boolean;
+  randomize_options?: boolean;
+}
+
+export interface ExamListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  exams: Exam[];
+}
+
+export interface ExamAnswer {
+  id: number;
+  attempt_id: number;
+  question_id: number;
+  answer_text?: string;
+  is_correct?: boolean;
+  points_earned?: number;
+  manually_graded: boolean;
+  grader_feedback?: string;
+  created_at: string;
+}
+
+export interface ExamAnswerDetail extends ExamAnswer {
+  question: ExamQuestion;
+}
+
+export interface ExamAnswerCreate {
+  question_id: number;
+  answer_text: string;
+}
+
+export interface ExamAttempt {
+  id: number;
+  exam_id: number;
+  user_email: string;
+  user_id?: number;
+  started_at: string;
+  submitted_at?: string;
+  time_spent_seconds?: number;
+  total_points?: number;
+  earned_points?: number;
+  score_percentage?: number;
+  passed?: boolean;
+  is_completed: boolean;
+  created_at: string;
+}
+
+export interface ExamAttemptDetail extends ExamAttempt {
+  answers: ExamAnswerDetail[];
+  exam_title?: string;
+}
+
+export interface ExamAttemptCreate {
+  exam_id: number;
+  user_email: string;
+}
+
+export interface ExamAttemptSubmit {
+  answers: ExamAnswerCreate[];
+}
+
+export interface ExamAttemptListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  attempts: ExamAttemptDetail[];
+}
+
+export interface GeneratedQuestion {
+  question_type: QuestionType;
+  question_text: string;
+  options?: string[];
+  correct_answer: string;
+  explanation?: string;
+  difficulty: string;
+  source_video_id: number;
+}
+
+export interface QuestionGenerationRequest {
+  video_ids: number[];
+  num_questions?: number;
+  difficulty?: string;
+  question_types?: QuestionType[];
+}
+
+export interface QuestionGenerationResponse {
+  questions: GeneratedQuestion[];
+  total_generated: number;
+}
+
+export interface ExamStatistics {
+  exam_id: number;
+  exam_title: string;
+  total_attempts: number;
+  completed_attempts: number;
+  average_score?: number;
+  pass_rate?: number;
+  highest_score?: number;
+  lowest_score?: number;
+}
+
+export interface UserExamStatistics {
+  user_email: string;
+  total_exams_taken: number;
+  exams_passed: number;
+  exams_failed: number;
+  average_score?: number;
+  total_time_spent_minutes: number;
 }

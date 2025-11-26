@@ -1,6 +1,8 @@
 from pydantic_settings import BaseSettings
 from typing import List
 import os
+import json
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -46,7 +48,25 @@ class Settings(BaseSettings):
     ELEVENLABS_MODEL_ID: str = "eleven_flash_v2_5"  # Default model
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # Default origins for local dev; overridden by .env (generated from deployment/config.toml)
+    CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:5173"]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        # Accept JSON array or comma-separated string from env/.env
+        if v is None:
+            return v
+        if isinstance(v, str):
+            s = v.strip()
+            if s.startswith("["):
+                try:
+                    return json.loads(s)
+                except Exception:
+                    # fall back to comma-separated parsing
+                    pass
+            return [i.strip() for i in s.split(",") if i.strip()]
+        return v
 
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20

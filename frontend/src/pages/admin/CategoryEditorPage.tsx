@@ -86,7 +86,7 @@ const CategoryEditorPage: React.FC = () => {
 
       const finalIcon = customIcon.trim() || icon;
 
-      const categoryData: VideoCategoryCreate | VideoCategoryUpdate = {
+      const categoryCreateData: VideoCategoryCreate = {
         name: name.trim(),
         description: description.trim() || undefined,
         parent_id: parentId,
@@ -96,9 +96,10 @@ const CategoryEditorPage: React.FC = () => {
       };
 
       if (isEditMode && id) {
-        await categoriesAPI.update(parseInt(id), categoryData);
+        const updatePayload: VideoCategoryUpdate = { ...categoryCreateData };
+        await categoriesAPI.update(parseInt(id), updatePayload);
       } else {
-        await categoriesAPI.create(categoryData);
+        await categoriesAPI.create(categoryCreateData);
       }
 
       navigate('/admin/categories');
