@@ -6,6 +6,7 @@
 # IDE
 .vscode/
 .idea/
+InternalTrainingSystem-Fresh.code-workspace
 *.swp
 *.swo
 *~
@@ -64,4 +65,3 @@ deployment/config.toml
 *.wmv
 *.flv
 *.webm
-InternalTrainingSystem-Fresh.code-workspace

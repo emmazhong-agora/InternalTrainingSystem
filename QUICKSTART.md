@@ -160,6 +160,9 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 - ✅ Check `cors_origins` inside `deployment/config.toml`
 - ✅ Restart backend server
 
+### "Default prompts missing" warning
+- ✅ Run `./scripts/seed_prompts.sh dev` (or `./scripts/seed_prompts.sh prod` in production) after the Docker stack is up so `backend/seed_prompts.py` writes the baseline prompt templates into Postgres.
+
 ### Can't upload video
 - ✅ Verify AWS credentials
 - ✅ Check S3 bucket exists
