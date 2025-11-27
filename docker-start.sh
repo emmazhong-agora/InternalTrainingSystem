@@ -76,16 +76,20 @@ check_docker_compose() {
     fi
 
     # Prefer plugin (docker compose); block legacy docker-compose v1
-    if [ "$COMPOSE_NAME" = "docker-compose" ]; then
-        print_error "Legacy docker-compose v1 is not supported. Please install the Compose plugin (v${MIN_COMPOSE_VERSION}+)."
-        echo "Run: sudo scripts/install_compose_plugin.sh"
-        exit 1
-    fi
-
     if ! version_ge "$COMPOSE_VERSION" "$MIN_COMPOSE_VERSION"; then
         print_error "Docker Compose version $COMPOSE_VERSION detected. Need v${MIN_COMPOSE_VERSION}+."
         echo "Run: sudo scripts/install_compose_plugin.sh v${MIN_COMPOSE_VERSION}"
         exit 1
+    fi
+
+    if [ "$COMPOSE_NAME" = "docker-compose" ]; then
+        if [[ "$COMPOSE_VERSION" != v2.* && "$COMPOSE_VERSION" != 2.* ]]; then
+            print_error "docker-compose v1.x is not supported. Install the Compose plugin (v${MIN_COMPOSE_VERSION}+)."
+            echo "Run: sudo scripts/install_compose_plugin.sh"
+            exit 1
+        else
+            print_warning "Using docker-compose shim for Compose v2. Consider running 'docker compose' plugin directly."
+        fi
     fi
 
     print_success "Docker Compose $COMPOSE_VERSION is installed"
