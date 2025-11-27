@@ -5,7 +5,7 @@ This guide covers deploying the Internal Training System using Docker.
 ## Prerequisites
 
 - Docker Engine 20.10+
-- Docker Compose 2.0+
+- Docker Compose **2.40+** (install via `sudo scripts/install_compose_plugin.sh`)
 - Sufficient disk space (minimum 10GB recommended)
 - Required API keys (OpenAI, Agora, AWS S3)
 
@@ -47,6 +47,8 @@ To hand over a true “one-click” Docker deployment:
 1. Copy `deployment/config.example.toml` to `deployment/config.toml` and populate it with the customer’s credentials (database, AWS S3 bucket, OpenAI key, Agora settings, Microsoft TTS, ElevenLabs, etc).
 2. Run `./docker-start.sh dev` or `./docker-start.sh prod`. The script automatically calls `python3 deployment/render_env.py`, which converts the TOML config into the `.env` file that docker-compose uses for PostgreSQL, the FastAPI backend, and the frontend build arguments.
 3. Distribute only the filled `deployment/config.toml` plus the repository. Your customer simply executes the same script and receives the identical stack (database included) in a single command.
+
+> Make sure Docker Compose plugin is **v2.40+** before running the script. If the server ships with the legacy `docker-compose` binary, upgrade using `sudo scripts/install_compose_plugin.sh`.
 
 You can also regenerate the `.env` manually if needed:
 

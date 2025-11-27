@@ -14,6 +14,10 @@ NC='\033[0m' # No Color
 # Config paths
 CONFIG_FILE="deployment/config.toml"
 ENV_RENDER_SCRIPT="deployment/render_env.py"
+MIN_COMPOSE_VERSION="2.40.0"
+COMPOSE_CMD=()
+COMPOSE_NAME=""
+COMPOSE_VERSION=""
 
 # Functions
 print_error() {
@@ -43,13 +47,48 @@ check_docker() {
 }
 
 # Check if Docker Compose is installed
+version_ge() {
+    # Returns 0 when $1 >= $2 (semantic comparison)
+    printf '%s\n%s\n' "$2" "$1" | sort -C -V
+}
+
+detect_compose() {
+    if docker compose version >/dev/null 2>&1; then
+        COMPOSE_CMD=(docker compose)
+        COMPOSE_NAME="docker compose"
+        COMPOSE_VERSION="$(docker compose version --short 2>/dev/null || docker compose version | awk 'NR==1{print $3}')"
+        return 0
+    fi
+    if command -v docker-compose >/dev/null 2>&1; then
+        COMPOSE_CMD=(docker-compose)
+        COMPOSE_NAME="docker-compose"
+        COMPOSE_VERSION="$(docker-compose version --short 2>/dev/null || docker-compose --version | awk '{print $3}' | tr -d ',')"
+        return 0
+    fi
+    return 1
+}
+
 check_docker_compose() {
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        print_error "Docker Compose is not installed. Please install Docker Compose first."
-        echo "Visit: https://docs.docker.com/compose/install/"
+    if ! detect_compose; then
+        print_error "Docker Compose is not installed. Please install Docker Compose v${MIN_COMPOSE_VERSION}+."
+        echo "You can run: sudo scripts/install_compose_plugin.sh"
         exit 1
     fi
-    print_success "Docker Compose is installed"
+
+    # Prefer plugin (docker compose); block legacy docker-compose v1
+    if [ "$COMPOSE_NAME" = "docker-compose" ]; then
+        print_error "Legacy docker-compose v1 is not supported. Please install the Compose plugin (v${MIN_COMPOSE_VERSION}+)."
+        echo "Run: sudo scripts/install_compose_plugin.sh"
+        exit 1
+    fi
+
+    if ! version_ge "$COMPOSE_VERSION" "$MIN_COMPOSE_VERSION"; then
+        print_error "Docker Compose version $COMPOSE_VERSION detected. Need v${MIN_COMPOSE_VERSION}+."
+        echo "Run: sudo scripts/install_compose_plugin.sh v${MIN_COMPOSE_VERSION}"
+        exit 1
+    fi
+
+    print_success "Docker Compose $COMPOSE_VERSION is installed"
 }
 
 # Check if Docker is running
@@ -120,7 +159,7 @@ usage() {
 # Start development environment
 start_dev() {
     print_info "Starting development environment..."
-    docker-compose up --build -d
+    "${COMPOSE_CMD[@]}" up --build -d
 
     echo ""
     print_success "Development environment started!"
@@ -137,7 +176,7 @@ start_dev() {
 # Start production environment
 start_prod() {
     print_info "Starting production environment..."
-    docker-compose -f docker-compose.prod.yml up --build -d
+    "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml up --build -d
 
     echo ""
     print_success "Production environment started!"
@@ -154,12 +193,12 @@ start_prod() {
 stop_containers() {
     print_info "Stopping containers..."
 
-    if [ -f docker-compose.prod.yml ] && docker-compose -f docker-compose.prod.yml ps -q &> /dev/null; then
-        docker-compose -f docker-compose.prod.yml down
+    if [ -f docker-compose.prod.yml ] && "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml ps -q &> /dev/null; then
+        "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml down
     fi
 
-    if docker-compose ps -q &> /dev/null; then
-        docker-compose down
+    if "${COMPOSE_CMD[@]}" ps -q &> /dev/null; then
+        "${COMPOSE_CMD[@]}" down
     fi
 
     print_success "Containers stopped"
@@ -169,10 +208,10 @@ stop_containers() {
 restart_containers() {
     print_info "Restarting containers..."
 
-    if [ -f docker-compose.prod.yml ] && docker-compose -f docker-compose.prod.yml ps -q &> /dev/null; then
-        docker-compose -f docker-compose.prod.yml restart
+    if [ -f docker-compose.prod.yml ] && "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml ps -q &> /dev/null; then
+        "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml restart
     else
-        docker-compose restart
+        "${COMPOSE_CMD[@]}" restart
     fi
 
     print_success "Containers restarted"
@@ -182,10 +221,10 @@ restart_containers() {
 view_logs() {
     print_info "Viewing logs (Ctrl+C to exit)..."
 
-    if [ -f docker-compose.prod.yml ] && docker-compose -f docker-compose.prod.yml ps -q &> /dev/null; then
-        docker-compose -f docker-compose.prod.yml logs -f
+    if [ -f docker-compose.prod.yml ] && "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml ps -q &> /dev/null; then
+        "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml logs -f
     else
-        docker-compose logs -f
+        "${COMPOSE_CMD[@]}" logs -f
     fi
 }
 
@@ -194,10 +233,10 @@ show_status() {
     print_info "Container status:"
     echo ""
 
-    if [ -f docker-compose.prod.yml ] && docker-compose -f docker-compose.prod.yml ps -q &> /dev/null; then
-        docker-compose -f docker-compose.prod.yml ps
+    if [ -f docker-compose.prod.yml ] && "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml ps -q &> /dev/null; then
+        "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml ps
     else
-        docker-compose ps
+        "${COMPOSE_CMD[@]}" ps
     fi
 }
 
@@ -212,9 +251,9 @@ clean_all() {
 
         # Stop and remove containers, volumes
         if [ -f docker-compose.prod.yml ]; then
-            docker-compose -f docker-compose.prod.yml down -v --rmi all 2>/dev/null || true
+            "${COMPOSE_CMD[@]}" -f docker-compose.prod.yml down -v --rmi all 2>/dev/null || true
         fi
-        docker-compose down -v --rmi all 2>/dev/null || true
+        "${COMPOSE_CMD[@]}" down -v --rmi all 2>/dev/null || true
 
         print_success "Cleanup complete"
     else

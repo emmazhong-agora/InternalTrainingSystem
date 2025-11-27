@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 import os
 import json
@@ -7,6 +7,12 @@ from pydantic import field_validator
 
 class Settings(BaseSettings):
     """Application settings."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore",
+    )
 
     # Application
     PROJECT_NAME: str = "Internal Training System"
@@ -76,10 +82,5 @@ class Settings(BaseSettings):
     MAX_VIDEO_SIZE_MB: int = 500
     ALLOWED_VIDEO_EXTENSIONS: List[str] = [".mp4", ".mov", ".avi", ".mkv", ".webm"]
     ALLOWED_TRANSCRIPT_EXTENSIONS: List[str] = [".vtt"]
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-
 
 settings = Settings()

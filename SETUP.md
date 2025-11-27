@@ -11,6 +11,7 @@ Before you begin, ensure you have the following installed:
 - **PostgreSQL 14 or higher** - [Download](https://www.postgresql.org/download/)
 - **AWS Account** - For S3 storage
 - **Git** - For version control
+- **Docker Compose plugin 2.40+** – install via `sudo scripts/install_compose_plugin.sh` (older `docker-compose` v1 is not supported)
 
 ## Unified Configuration
 
