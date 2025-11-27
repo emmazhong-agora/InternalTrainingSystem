@@ -27,6 +27,10 @@ logs/
 *.tmp
 *.temp
 *.txt
+# Allow requirements files (exceptions to override *.txt)
+!requirements.txt
+!**/requirements.txt
+!**/requirements-*.txt
 body.txt
 output.txt
 

@@ -90,7 +90,7 @@ services:
           cpus: '1.0'
           memory: 1G
       # Multiple replicas for high availability
-      replicas: 2
+      # replicas: 2
 
   # Frontend Builder (builds static assets)
   frontend:
