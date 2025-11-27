@@ -57,6 +57,7 @@ Tmp/
 Requirements/
 Files/
 deployment/config.toml
+deployment/config.aws.toml
 
 # Large media files
 *.mp4

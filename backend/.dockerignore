@@ -30,6 +30,9 @@ Thumbs.db
 *.md
 docs/
 
+# Keep dependency manifests
+!requirements.txt
+
 # Git
 .git/
 .gitignore
